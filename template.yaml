@@ -1,0 +1,45 @@
+# https://github.com/awslabs/serverless-application-model/blob/develop/versions/2016-10-31.md
+# Indentation needs to be set with spaces, because YAML...
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: API endpoint to retrieve post-match stats for a user
+
+Globals:
+    Api:
+        # API Gateway regional endpoints
+        EndpointConfiguration: EDGE
+        Cors:
+            AllowMethods: "'*'"
+            AllowHeaders: "'*'"
+            AllowOrigin: "'*'"
+        MinimumCompressionSize: 100
+
+Resources:
+    RetrieveUserPostMatchStatsFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: retrieve-user-post-match-stats.default
+            Runtime: nodejs10.x
+            Timeout: 180
+            MemorySize: 128
+            CodeUri: ./dist/retrieve-user-post-match-stats
+            Policies:
+                - AWSLambdaVPCAccessExecutionRole
+                - AmazonSESFullAccess
+                - SecretsManagerReadWrite
+                # - arn:aws:iam::478062583808:policy/CloudWatchPolicyForLambda # See https://stackoverflow.com/questions/51166504/disable-cloudwatch-to-monitor-logs-for-lambda-function
+            Tags:
+                LambdaName: api-retrieve-user-post-match-stats
+            Events:
+                RetrieveUserPostMatchStatsResource:
+                    Type: Api
+                    Properties:
+                        Path: /{proxy+}
+                        Method: any
+
+Outputs:
+    RetrieveUserPostMatchStatsApi:
+        Description: URL to retrieve retrieve post-match stats for a user
+        Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/bgsRetrieveUserPostMatchStats/'
+        Export:
+            Name: RetrieveUserPostMatchStatsApi
