@@ -10,15 +10,7 @@ export default async (event): Promise<any> => {
 	try {
 		const input: Input = JSON.parse(event.body);
 
-		const limitCriteria = input.limitResults && input.limitResults > 0 ? `LIMIT ${input.limitResults}` : 'LIMIT 50';
-		const heroCardCriteria = input.heroCardId ? `AND heroCardId = '${input.heroCardId}' ` : '';
-		const query = `
-			SELECT * FROM bgs_single_run_stats
-			WHERE (userId = '${input.userId}' OR userName = '${input.userName}')
-			${heroCardCriteria}
-			ORDER BY id DESC
-			${limitCriteria}
-		`;
+		const query = buildQuery(input);
 		console.log('running query', query);
 
 		const mysql = await getConnectionBgs();
@@ -33,6 +25,7 @@ export default async (event): Promise<any> => {
 			})
 			.filter(result => result.stats);
 		console.log('results', results);
+		await mysql.end();
 		const zipped = await zip(JSON.stringify(results));
 
 		const response = {
@@ -55,6 +48,25 @@ export default async (event): Promise<any> => {
 		};
 		console.log('sending back error reponse', response);
 		return response;
+	}
+};
+
+const buildQuery = (input: Input): string => {
+	if (input.reviewId) {
+		return `
+			SELECT * FROM bgs_single_run_stats
+			WHERE reviewId = '${input.reviewId}'
+		`;
+	} else {
+		const limitCriteria = input.limitResults && input.limitResults > 0 ? `LIMIT ${input.limitResults}` : 'LIMIT 50';
+		const heroCardCriteria = input.heroCardId ? `AND heroCardId = '${input.heroCardId}' ` : '';
+		return `
+			SELECT * FROM bgs_single_run_stats
+			WHERE (userId = '${input.userId}' OR userName = '${input.userName}')
+			${heroCardCriteria}
+			ORDER BY id DESC
+			${limitCriteria}
+		`;
 	}
 };
 
