@@ -58,14 +58,13 @@ const buildQuery = (input: Input): string => {
 			WHERE reviewId = '${input.reviewId}'
 		`;
 	} else {
-		const limitCriteria = input.limitResults && input.limitResults > 0 ? `LIMIT ${input.limitResults}` : 'LIMIT 50';
 		const heroCardCriteria = input.heroCardId ? `AND heroCardId = '${input.heroCardId}' ` : '';
+		const usernameCriteria = input.userName ? `OR userName = '${input.userName}'` : '';
 		return `
 			SELECT * FROM bgs_single_run_stats
-			WHERE (userId = '${input.userId}' OR userName = '${input.userName}')
+			WHERE (userId = '${input.userId}' ${usernameCriteria})
 			${heroCardCriteria}
 			ORDER BY id DESC
-			${limitCriteria}
 		`;
 	}
 };
@@ -77,15 +76,15 @@ const zip = async (input: string) => {
 const parseStats = (inputStats: string): string => {
 	try {
 		const parsed = JSON.parse(inputStats);
-		console.log('parsed', parsed);
+		// console.log('parsed', parsed);
 		return parsed;
 	} catch (e) {
 		try {
-			console.log('reading base64', inputStats);
+			// console.log('reading base64', inputStats);
 			const fromBase64 = Buffer.from(inputStats, 'base64').toString();
-			console.log('fromBase64', fromBase64);
+			// console.log('fromBase64', fromBase64);
 			const inflated = inflate(fromBase64, { to: 'string' });
-			console.log('inflated', inflated);
+			// console.log('inflated', inflated);
 			return JSON.parse(inflated);
 		} catch (e) {
 			console.warn('Could not build full stats, ignoring review', inputStats);
