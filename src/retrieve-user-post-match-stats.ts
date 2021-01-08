@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
+import SqlString from 'sqlstring';
 import { inflate } from 'pako';
 import { gzipSync } from 'zlib';
 import { getConnection as getConnectionBgs } from './services/rds-bgs';
@@ -52,17 +53,18 @@ export default async (event): Promise<any> => {
 };
 
 const buildQuery = (input: Input): string => {
+	const escape = SqlString.escape;
 	if (input.reviewId) {
 		return `
 			SELECT * FROM bgs_single_run_stats
-			WHERE reviewId = '${input.reviewId}'
+			WHERE reviewId = ${escape(input.reviewId)}
 		`;
 	} else {
-		const heroCardCriteria = input.heroCardId ? `AND heroCardId = '${input.heroCardId}' ` : '';
-		const usernameCriteria = input.userName ? `OR userName = '${input.userName}'` : '';
+		const heroCardCriteria = input.heroCardId ? `AND heroCardId = ${escape(input.heroCardId)} ` : '';
+		const usernameCriteria = input.userName ? `OR userName = ${escape(input.userName)}` : '';
 		return `
 			SELECT * FROM bgs_single_run_stats
-			WHERE (userId = '${input.userId}' ${usernameCriteria})
+			WHERE (userId = ${escape(input.userId)} ${usernameCriteria})
 			${heroCardCriteria}
 			ORDER BY id DESC
 		`;
