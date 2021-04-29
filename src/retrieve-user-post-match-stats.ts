@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import SqlString from 'sqlstring';
 import { inflate } from 'pako';
+import SqlString from 'sqlstring';
 import { gzipSync } from 'zlib';
 import { getConnection as getConnectionBgs } from './services/rds-bgs';
 
@@ -8,48 +8,37 @@ import { getConnection as getConnectionBgs } from './services/rds-bgs';
 // the more traditional callback-style handler.
 // [1]: https://aws.amazon.com/blogs/compute/node-js-8-10-runtime-now-available-in-aws-lambda/
 export default async (event): Promise<any> => {
-	try {
-		const input: Input = JSON.parse(event.body);
+	const input: Input = JSON.parse(event.body);
 
-		const query = buildQuery(input);
-		console.log('running query', query);
+	const query = buildQuery(input);
+	console.log('running query', query);
 
-		const mysql = await getConnectionBgs();
-		const results: any[] = ((await mysql.query(query)) as any[])
-			.filter(result => result.jsonStats && result.jsonStats.length <= 50000)
-			.map(result => {
-				const stats = parseStats(result.jsonStats);
-				return {
-					reviewId: result.reviewId,
-					stats: stats,
-				};
-			})
-			.filter(result => result.stats);
-		console.log('results', results);
-		await mysql.end();
-		const zipped = await zip(JSON.stringify(results));
+	const mysql = await getConnectionBgs();
+	const results: any[] = ((await mysql.query(query)) as any[])
+		.filter(result => result.jsonStats && result.jsonStats.length <= 50000)
+		.map(result => {
+			const stats = parseStats(result.jsonStats);
+			return {
+				reviewId: result.reviewId,
+				stats: stats,
+			};
+		})
+		.filter(result => result.stats);
+	console.log('results', results);
+	await mysql.end();
+	const zipped = await zip(JSON.stringify(results));
 
-		const response = {
-			statusCode: 200,
-			isBase64Encoded: true,
-			body: zipped,
-			headers: {
-				'Content-Type': 'text/html',
-				'Content-Encoding': 'gzip',
-			},
-		};
-		console.log('sending back success reponse');
-		return response;
-	} catch (e) {
-		console.error('issue computing stats', e);
-		const response = {
-			statusCode: 500,
-			isBase64Encoded: false,
-			body: null,
-		};
-		console.log('sending back error reponse', response);
-		return response;
-	}
+	const response = {
+		statusCode: 200,
+		isBase64Encoded: true,
+		body: zipped,
+		headers: {
+			'Content-Type': 'text/html',
+			'Content-Encoding': 'gzip',
+		},
+	};
+	console.log('sending back success reponse');
+	return response;
 };
 
 const buildQuery = (input: Input): string => {
@@ -90,6 +79,7 @@ const parseStats = (inputStats: string): string => {
 			return JSON.parse(inflated);
 		} catch (e) {
 			console.warn('Could not build full stats, ignoring review', inputStats);
+			return null;
 		}
 	}
 };
